@@ -20,11 +20,15 @@ class OracleOfBacon
   validate :from_does_not_equal_to
 
   def from_does_not_equal_to
-    # YOUR CODE HERE
+    if self.from.downcase == self.to.downcase
+          errors.add(:base, "From cannot be the same as To")
+    end
   end
-
-  def initialize(api_key='')
-    # your code here
+  
+  def initialize(api_key='38b99ce9ec87')
+    @api_key = api_key
+    self.from = 'Kevin Bacon'
+    self.to = 'Kevin Bacon'
   end
 
   def find_connections
@@ -37,13 +41,16 @@ class OracleOfBacon
       # convert all of these into a generic OracleOfBacon::NetworkError,
       #  but keep the original error message
       # your code here
+      raise NetworkError
     end
     # your code here: create the OracleOfBacon::Response object
+    @response = Response.new(xml)
   end
 
   def make_uri_from_arguments
     # your code here: set the @uri attribute to properly-escaped URI
     #   constructed from the @from, @to, @api_key arguments
+     @uri = "http://oracleofbacon.org/p=" + @api_key + '&a=' + CGI.escape(@from) + '&b=' + CGI.escape(@to)
   end
       
   class Response
@@ -59,6 +66,14 @@ class OracleOfBacon
     def parse_response
       if ! @doc.xpath('/error').empty?
         parse_error_response
+      elsif ! @doc.xpath('/link').empty?
+        parse_graph_response
+
+      elsif ! @doc.xpath('/spellcheck').empty?
+          parse_spellcheck_response
+      else
+          @type = :unknown
+          @data = 'unknown response'
       # your code here: 'elsif' clauses to handle other responses
       # for responses not matching the 3 basic types, the Response
       # object should have type 'unknown' and data 'unknown response'         
@@ -67,6 +82,16 @@ class OracleOfBacon
     def parse_error_response
       @type = :error
       @data = 'Unauthorized access'
+    end
+    
+    def parse_graph_response
+      @type = :graph
+      @data = @doc.xpath('/link/*').map { |a| a.text() }
+    end
+    
+    def parse_spellcheck_response
+      @type = :spellcheck
+      @data = @doc.xpath('//match').map { |a| a.text() }
     end
   end
 end
